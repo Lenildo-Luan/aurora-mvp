@@ -59,6 +59,7 @@ const softmax = (arr: number[]): number[] => {
 
 const analyzeText = async () => {
   error.value = null
+  showResults.value = false
   try {
     if (!textInput.value.trim()) {
       error.value = 'Please enter some text'
@@ -106,6 +107,7 @@ const analyzeText = async () => {
     }
     showResults.value = true
   } catch (err: any) {
+    console.error('Analysis error:', err)
     error.value = err.message || 'An error occurred'
   } finally {
     isAnalyzing.value = false
