@@ -3,8 +3,8 @@ import { ref } from 'vue'
 </script>
 
 <template>
-  <div>
+  <UApp>
     <NuxtRouteAnnouncer />
     <NuxtPage />
-  </div>
+  </UApp>
 </template>
