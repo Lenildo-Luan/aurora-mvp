@@ -117,17 +117,6 @@ const handleExample = (text: string) => {
   analyzeText()
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'ready':
-      return 'bg-green-500'
-    case 'error':
-      return 'bg-red-500'
-    default:
-      return 'bg-yellow-500'
-  }
-}
-
 const getScorePercentage = (score: number) => {
   return Math.min(score * 100, 100)
 }
@@ -147,125 +136,152 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-8">
-    <div class="max-w-2xl mx-auto">
-      <!-- Header -->
-      <header class="text-center mb-8">
-        <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent mb-2">
-          🎭 Emotion Analyzer
-        </h1>
-        <p class="text-slate-400">
-          Test Bertimbau emotion intensity with transformers.js
-        </p>
-      </header>
+  <UContainer class="py-8">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold mb-2">🎭 Emotion Analyzer</h1>
+      <p class="text-muted">
+        Test Bertimbau emotion intensity with @huggingface/transformers
+      </p>
+    </div>
 
-      <!-- Status Panel -->
-      <div class="bg-slate-700 rounded-lg border border-slate-600 p-4 mb-8">
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex justify-between items-center">
-            <span class="text-slate-300 font-medium">Backend:</span>
-            <span class="px-3 py-1 rounded text-sm font-medium" :class="getStatusColor(backendStatus)">
-              {{ backendStatus }}
-            </span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-slate-300 font-medium">Model:</span>
-            <span
-              class="px-3 py-1 rounded text-sm font-medium"
-              :class="
-                modelStatus === 'ready'
-                  ? 'bg-green-500'
-                  : modelStatus === 'error'
-                    ? 'bg-red-500'
-                    : 'bg-yellow-500'
-              "
-            >
-              {{ modelStatus === 'ready' ? 'Ready' : modelStatus === 'loading' ? 'Loading...' : 'Error' }}
-            </span>
-          </div>
+    <!-- Status Panel -->
+    <UCard class="mb-8">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Model Status</h2>
         </div>
-        <div v-if="modelError" class="mt-3 p-2 bg-red-900 text-red-200 rounded text-sm">
-          {{ modelError }}
+      </template>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex items-center justify-between">
+          <span class="text-muted">Backend:</span>
+          <UBadge
+            :color="backendStatus === 'WebGPU' ? 'success' : 'info'"
+            variant="soft"
+          >
+            {{ backendStatus }}
+          </UBadge>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-muted">Model:</span>
+          <UBadge
+            :color="
+              modelStatus === 'ready'
+                ? 'success'
+                : modelStatus === 'error'
+                  ? 'error'
+                  : 'warning'
+            "
+            variant="soft"
+          >
+            {{ modelStatus === 'ready' ? 'Ready' : modelStatus === 'loading' ? 'Loading...' : 'Error' }}
+          </UBadge>
         </div>
       </div>
 
-      <!-- Input Section -->
-      <div class="bg-slate-700 rounded-lg border border-slate-600 p-6 mb-8">
-        <label for="text-input" class="block text-slate-300 font-medium mb-3">
-          Enter text to analyze:
-        </label>
-        <textarea
-          id="text-input"
-          v-model="textInput"
-          class="w-full h-24 bg-slate-800 border border-slate-600 rounded-lg p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
-          placeholder="Type some text to analyze emotion intensity..."
-        />
-        <button
+      <UAlert
+        v-if="modelError"
+        icon="i-lucide-alert-circle"
+        color="error"
+        title="Model Error"
+        class="mt-4"
+      >
+        {{ modelError }}
+      </UAlert>
+    </UCard>
+
+    <!-- Input Section -->
+    <UCard class="mb-8">
+      <template #header>
+        <h2 class="text-lg font-semibold">Analyze Text</h2>
+      </template>
+
+      <div class="space-y-4">
+        <UFormField label="Enter text to analyze">
+          <UTextarea
+            v-model="textInput"
+            placeholder="Type some text to analyze emotion intensity..."
+            :rows="6"
+            :disabled="modelStatus !== 'ready'"
+          />
+        </UFormField>
+
+        <UButton
           @click="analyzeText"
           :disabled="modelStatus !== 'ready' || isAnalyzing"
-          class="mt-4 w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
-          :class="{ 'opacity-50 cursor-not-allowed': modelStatus !== 'ready' || isAnalyzing }"
+          :loading="isAnalyzing"
+          color="primary"
+          size="lg"
+          block
         >
-          <span v-if="isAnalyzing" class="inline-block">
-            Analyzing...
-          </span>
-          <span v-else>
-            Analyze
-          </span>
-        </button>
+          {{ isAnalyzing ? 'Analyzing...' : 'Analyze' }}
+        </UButton>
       </div>
+    </UCard>
 
-      <!-- Error Display -->
-      <div v-if="error" class="bg-red-900 border border-red-700 rounded-lg p-4 mb-8 text-red-200">
-        {{ error }}
-      </div>
+    <!-- Error Display -->
+    <UAlert
+      v-if="error"
+      icon="i-lucide-alert-circle"
+      color="error"
+      class="mb-8"
+    >
+      {{ error }}
+    </UAlert>
 
-      <!-- Results Section -->
-      <div v-if="showResults && results" class="bg-slate-700 rounded-lg border border-slate-600 p-6 mb-8">
-        <h2 class="text-xl font-bold text-slate-100 mb-6">Results</h2>
-        <div class="space-y-4">
-          <div v-for="(label, index) in results.labels" :key="index" class="space-y-2">
-            <div class="flex justify-between">
-              <span class="text-slate-300 font-medium">{{ label }}</span>
-              <span class="text-slate-400 text-sm">{{ results.scores[index].toFixed(4) }}</span>
-            </div>
-            <div class="w-full bg-slate-800 rounded-full h-2">
-              <div
-                class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-                :style="{ width: getScorePercentage(results.scores[index]) / 2 + '%' }"
-              />
-            </div>
+    <!-- Results Section -->
+    <UCard v-if="showResults && results" class="mb-8">
+      <template #header>
+        <h2 class="text-lg font-semibold">Analysis Results</h2>
+      </template>
+
+      <div class="space-y-6">
+        <div v-for="(label, index) in results.labels" :key="index" class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-medium">{{ label }}</span>
+            <span class="text-muted text-sm">{{ results.scores[index].toFixed(4) }}</span>
           </div>
-        </div>
-        <div class="mt-6 pt-4 border-t border-slate-600">
-          <p class="text-slate-400 text-sm">
-            <strong>Inference Time:</strong> {{ results.inferenceTime }}ms
-          </p>
-        </div>
-      </div>
-
-      <!-- Quick Examples -->
-      <div class="bg-slate-700 rounded-lg border border-slate-600 p-6">
-        <h3 class="text-lg font-bold text-slate-100 mb-4">Quick Examples</h3>
-        <div class="grid grid-cols-3 gap-3">
-          <button
-            v-for="example in exampleTests"
-            :key="example.label"
-            @click="handleExample(example.text)"
-            :disabled="modelStatus !== 'ready' || isAnalyzing"
-            class="px-4 py-2 bg-slate-600 hover:bg-slate-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-slate-100 font-medium rounded-lg transition-colors duration-200"
-          >
-            {{ example.label }}
-          </button>
+          <UProgress
+            :value="getScorePercentage(results.scores[index]) / 2"
+            color="primary"
+          />
         </div>
       </div>
 
-      <!-- Footer -->
-      <footer class="mt-12 text-center text-slate-500 text-sm">
-        <p>
-          Powered by Hugging Face Transformers.js | WebGPU with WASM fallback
-        </p>
-      </footer>
-    </div>
-  </div>
+      <USeparator class="my-6" />
+
+      <p class="text-muted text-sm">
+        <strong>Inference Time:</strong> {{ results.inferenceTime }}ms
+      </p>
+    </UCard>
+
+    <!-- Quick Examples -->
+    <UCard>
+      <template #header>
+        <h2 class="text-lg font-semibold">Quick Examples</h2>
+      </template>
+
+      <div class="grid grid-cols-3 gap-3">
+        <UButton
+          v-for="example in exampleTests"
+          :key="example.label"
+          @click="handleExample(example.text)"
+          :disabled="modelStatus !== 'ready' || isAnalyzing"
+          variant="outline"
+          color="neutral"
+          block
+        >
+          {{ example.label }}
+        </UButton>
+      </div>
+    </UCard>
+
+    <!-- Footer -->
+    <footer class="mt-12 text-center text-muted text-sm">
+      <p>
+        Powered by Hugging Face Transformers | WebGPU with WASM fallback
+      </p>
+    </footer>
+  </UContainer>
 </template>

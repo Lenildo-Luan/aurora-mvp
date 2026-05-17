@@ -5,29 +5,30 @@ const router = useRouter()
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center px-4">
-    <div class="max-w-md w-full text-center">
-      <h1 class="text-5xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent mb-4">
-        Aurora AI
-      </h1>
-      <p class="text-slate-400 mb-8 text-lg">
+  <div class="min-h-screen flex items-center justify-center px-4">
+    <UContainer class="max-w-md text-center py-12">
+      <h1 class="text-5xl font-bold mb-4">🌟 Aurora AI</h1>
+      <p class="text-muted mb-8 text-lg">
         Test state-of-the-art AI models in your browser
       </p>
 
       <div class="space-y-4">
-        <NuxtLink
+        <UButton
           to="/analyzer"
-          class="block px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors duration-200"
+          color="primary"
+          size="lg"
+          block
+          class="text-base"
         >
           🎭 Emotion Analyzer
-        </NuxtLink>
+        </UButton>
       </div>
 
-      <footer class="mt-16 text-slate-500 text-sm">
+      <footer class="mt-16 text-muted text-sm">
         <p>
-          Powered by Hugging Face Transformers.js | WebGPU with WASM fallback
+          Powered by Hugging Face Transformers | WebGPU with WASM fallback
         </p>
       </footer>
-    </div>
+    </UContainer>
   </div>
 </template>
