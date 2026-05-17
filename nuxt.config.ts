@@ -7,9 +7,12 @@ export default defineNuxtConfig({
     '@nuxt/a11y',
     '@nuxt/eslint',
     '@nuxt/hints',
-    '@nuxt/image',
     '@nuxt/test-utils',
     '@nuxt/ui',
     '@nuxt/scripts'
-  ]
+  ],
+
+  image: {
+    provider: 'ipx'
+  }
 })

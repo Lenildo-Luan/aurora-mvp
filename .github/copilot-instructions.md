@@ -100,6 +100,40 @@ test/
 - Nuxt DevTools enabled (`:F12` or `@nuxt/devtools` package)
 - App-level error handling via error.vue page
 
+## ML Model Integration
+
+This project includes integration with **Hugging Face Transformers.js** (via @xenova/transformers) for running ML models in the browser:
+
+**Model Details:**
+- **Name**: Bertimbau Emotion Intensity Classifier
+- **Model ID**: `lluanc/webai_test`
+- **Classes**: Anger, Disgust, Fear, Joy, Sadness, Surprise (6 classes)
+- **Framework**: BERT-based text classification
+- **Browser Execution**: No server required, runs entirely in browser
+
+**Key Files:**
+- `app/pages/analyzer.vue` - Emotion analysis UI with inline ML logic
+- Dependencies: `@xenova/transformers` (v2.17.2), `onnxruntime-web` (v1.14.0)
+
+**Usage (Client-side Only):**
+```typescript
+// Dynamic import (avoids SSR issues)
+const { pipeline } = await import('@xenova/transformers')
+const classifier = await pipeline('text-classification', 'lluanc/webai_test')
+const result = await classifier(text, { top_k: null })
+// result: [{ label: 'Anger', score: 0.95 }, ...]
+```
+
+**Performance:**
+- First load: Downloads ~435MB model (browser caches after)
+- Inference: 50-150ms (WebGPU), 200-500ms (WASM)
+- Backend: Auto-detects WebGPU, falls back to WASM
+
+**Important: Client-Side Only**
+- Always use dynamic imports to avoid SSR errors
+- Do NOT import transformers at module level
+- Load classifier only in `onMounted` or event handlers
+
 ## Available Copilot Skills
 
 The following skills are pre-configured and available:
@@ -110,7 +144,7 @@ The following skills are pre-configured and available:
 - `vue-best-practices` - Composition API patterns, TypeScript integration
 - `vue-router-best-practices` - Navigation guards, route params
 - `vue-testing-best-practices` - Vitest, Vue Test Utils, component testing
-- `vitetest` - Vitest configuration, mocking, coverage
+- `vitest` - Vitest configuration, mocking, coverage
 - `vite` - Vite build configuration and plugins
 - `unocss` - Atomic CSS engine (if/when used)
 - `vueuse-functions` - VueUse composables for common patterns
