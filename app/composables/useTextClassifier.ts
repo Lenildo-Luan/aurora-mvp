@@ -1,119 +1,118 @@
-import { ref, computed } from "vue";
-import { pipeline } from "@xenova/transformers";
+import { ref, computed } from 'vue'
 
 export interface ClassificationResult {
-  labels: string[];
-  scores: number[];
-  inferenceTime: number;
+  labels: string[]
+  scores: number[]
+  inferenceTime: number
 }
 
-const EMOTION_LABELS = [
-  "Anger",
-  "Disgust",
-  "Fear",
-  "Joy",
-  "Sadness",
-  "Surprise",
-];
+const EMOTION_LABELS = ['Anger', 'Disgust', 'Fear', 'Joy', 'Sadness', 'Surprise']
 
 export const useTextClassifier = () => {
-  const classifier = ref<any>(null);
-  const isLoading = ref(false);
-  const modelError = ref<string | null>(null);
-  const isAnalyzing = ref(false);
+  const tokenizer = ref<any>(null)
+  const model = ref<any>(null)
+  const isLoading = ref(false)
+  const modelError = ref<string | null>(null)
+  const isAnalyzing = ref(false)
 
   const modelStatus = computed(() => {
-    if (modelError.value) return "error";
-    if (!classifier.value) return "loading";
-    return "ready";
-  });
+    if (modelError.value) return 'error'
+    if (!model.value || !tokenizer.value) return 'loading'
+    return 'ready'
+  })
 
   const backendStatus = computed(() => {
-    if (typeof navigator !== "undefined" && (navigator as any).gpu) {
-      return "WebGPU";
+    if (typeof navigator !== 'undefined' && (navigator as any).gpu) {
+      return 'WebGPU'
     }
-    return "WASM";
-  });
+    return 'WASM'
+  })
 
   const initializeModel = async () => {
-    if (classifier.value) {
-      return;
+    if (model.value && tokenizer.value) {
+      return
     }
 
-    isLoading.value = true;
-    modelError.value = null;
+    isLoading.value = true
+    modelError.value = null
 
     try {
-      console.log("🎭 Loading Bertimbau Text Classifier");
-      console.log("Loading model...");
-      classifier.value = await pipeline(
-        "text-classification",
-        "lluanc/webai_test",
-      );
-      console.log("✓ Model loaded");
-      console.log("✓ Model fully initialized");
+      // Dynamic import - only loads in browser
+      const { AutoTokenizer, AutoModel } = await import('@huggingface/transformers')
+      
+      console.log('🎭 Loading Bertimbau Text Classifier')
+      console.log('Loading tokenizer...')
+      tokenizer.value = await AutoTokenizer.from_pretrained('lluanc/webai_test')
+      console.log('✓ Tokenizer loaded')
+
+      console.log('Loading model...')
+      model.value = await AutoModel.from_pretrained('lluanc/webai_test')
+      console.log('✓ Model loaded')
+      console.log('✓ Model fully initialized')
     } catch (error: any) {
-      console.error("Model initialization failed:", error);
-      modelError.value = error.message || "Failed to load model";
-      throw error;
+      console.error('Model initialization failed:', error)
+      modelError.value = error.message || 'Failed to load model'
+      throw error
     } finally {
-      isLoading.value = false;
+      isLoading.value = false
     }
-  };
+  }
+
+  const softmax = (arr: number[]): number[] => {
+    return arr.map((x) => Math.max(0, x))
+  }
 
   const analyzeText = async (text: string): Promise<ClassificationResult> => {
     if (!text.trim()) {
-      throw new Error("Please enter some text");
+      throw new Error('Please enter some text')
     }
 
-    if (!classifier.value) {
-      throw new Error("Model not loaded yet. Please waiat...");
+    if (!tokenizer.value || !model.value) {
+      throw new Error('Model not loaded yet. Please wait...')
     }
 
-    console.log("Analyzing text:", text);
-
-    isAnalyzing.value = true;
+    isAnalyzing.value = true
 
     try {
-      const startTime = performance.now();
+      const startTime = performance.now()
 
-      console.log("Running inference...");
-      const result = await classifier.value(text, {
-        top_k: null, // Get all scores
-      });
+      console.log('Tokenizing text...')
+      const inputs = await tokenizer.value(text)
+      console.log('Tokenized inputs:', inputs)
 
-      const endTime = performance.now();
-      const inferenceTime = Math.round((endTime - startTime) * 100) / 100;
+      console.log('Running inference...')
+      const { logits } = await model.value(inputs)
 
-      console.log("Raw result:", result);
+      const endTime = performance.now()
+      const inferenceTime = Math.round((endTime - startTime) * 100) / 100
 
-      // Build scores array in correct order for all 6 emotions
-      const scores = new Array(6).fill(0);
+      console.log('Raw logits:', logits)
 
-      // Map results to correct indices
-      if (Array.isArray(result)) {
-        result.forEach((item: any) => {
-          const labelIndex = EMOTION_LABELS.indexOf(item.label);
-          if (labelIndex !== -1) {
-            scores[labelIndex] = item.score;
-          }
-        });
+      let logitsArray: number[]
+      if (logits.data) {
+        logitsArray = Array.from(logits.data)
+      } else if (Array.isArray(logits)) {
+        logitsArray = logits
+      } else {
+        throw new Error('Unexpected logits format')
       }
 
-      console.log("Scores:", scores);
+      console.log('Logits array:', logitsArray)
+      const scores = softmax(logitsArray)
+      console.log('Scores:', scores)
 
       return {
         labels: EMOTION_LABELS,
-        scores,
+        scores: scores.slice(0, 6),
         inferenceTime,
-      };
+      }
     } catch (error: any) {
-      console.error("Inference error:", error);
-      throw error;
+      console.error('Inference error:', error)
+      throw error
     } finally {
-      isAnalyzing.value = false;
+      isAnalyzing.value = false
     }
-  };
+  }
 
   return {
     initializeModel,
@@ -123,6 +122,7 @@ export const useTextClassifier = () => {
     modelStatus,
     backendStatus,
     modelError,
-    classifier: computed(() => classifier.value),
-  };
-};
+    model: computed(() => model.value),
+    tokenizer: computed(() => tokenizer.value),
+  }
+}
