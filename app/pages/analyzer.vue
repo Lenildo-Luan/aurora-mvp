@@ -242,10 +242,10 @@ onMounted(async () => {
         <div v-for="(label, index) in results.labels" :key="index" class="space-y-2">
           <div class="flex items-center justify-between">
             <span class="font-medium">{{ label }}</span>
-            <span class="text-muted text-sm">{{ results.scores[index].toFixed(4) }}</span>
+            <!-- <span class="text-muted text-sm">{{ results.scores[index].toFixed(4) }}</span> -->
           </div>
           <UProgress
-            :value="getScorePercentage(results.scores[index]) / 2"
+            :modelValue="results.scores[index] * 50"
             color="primary"
           />
         </div>
