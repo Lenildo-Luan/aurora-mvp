@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useTextClassifier } from '~/composables/useTextClassifier'
 
 const textInput = ref('')
 const results = ref<any>(null)
 const showResults = ref(false)
 const error = ref<string | null>(null)
-const isLoading = ref(false)
-const isAnalyzing = ref(false)
-const modelStatus = ref('loading')
-const backendStatus = ref('WASM')
-const modelError = ref<string | null>(null)
 
 const exampleTests = [
   { label: 'Happy', text: "This is the best day of my life! I'm so happy!" },
@@ -17,45 +13,15 @@ const exampleTests = [
   { label: 'Neutral', text: 'This is neutral information.' },
 ]
 
-const EMOTION_LABELS = ['Anger', 'Disgust', 'Fear', 'Joy', 'Sadness', 'Surprise']
-
-let tokenizer: any = null
-let model: any = null
-
-const initializeModel = async () => {
-  if (model && tokenizer) {
-    return
-  }
-
-  isLoading.value = true
-  modelError.value = null
-
-  try {
-    const { AutoTokenizer, AutoModel } = await import('@huggingface/transformers')
-    
-    console.log('🎭 Loading Bertimbau Text Classifier')
-    console.log('Loading tokenizer...')
-    tokenizer = await AutoTokenizer.from_pretrained('lluanc/webai_test')
-    console.log('✓ Tokenizer loaded')
-    
-    console.log('Loading model...')
-    model = await AutoModel.from_pretrained('lluanc/webai_test')
-    console.log('✓ Model loaded')
-    console.log('✓ Model fully initialized')
-    
-    modelStatus.value = 'ready'
-  } catch (err: any) {
-    console.error('Model initialization failed:', err)
-    modelError.value = err.message || 'Failed to load model'
-    modelStatus.value = 'error'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-const softmax = (arr: number[]): number[] => {
-  return arr.map((x) => Math.max(0, x))
-}
+const { 
+  initializeModel, 
+  analyzeText: classifyText, 
+  isLoading, 
+  isAnalyzing, 
+  modelStatus, 
+  backendStatus, 
+  modelError 
+} = useTextClassifier()
 
 const analyzeText = async () => {
   error.value = null
@@ -66,51 +32,12 @@ const analyzeText = async () => {
       return
     }
 
-    if (!model || !tokenizer) {
-      error.value = 'Model not loaded yet. Please wait...'
-      return
-    }
-
-    isAnalyzing.value = true
-    const startTime = performance.now()
-
-    console.log('Tokenizing text...')
-    const inputs = await tokenizer(textInput.value)
-    console.log('Tokenized inputs:', inputs)
-
-    console.log('Running inference...')
-    const { logits } = await model(inputs)
-
-    const endTime = performance.now()
-    const inferenceTime = Math.round((endTime - startTime) * 100) / 100
-
-    console.log('Raw logits:', logits)
-
-    // Convert logits to array
-    let logitsArray: number[]
-    if (logits.data) {
-      logitsArray = Array.from(logits.data)
-    } else if (Array.isArray(logits)) {
-      logitsArray = logits
-    } else {
-      throw new Error('Unexpected logits format')
-    }
-
-    console.log('Logits array:', logitsArray)
-    const scores = softmax(logitsArray)
-    console.log('Scores:', scores)
-
-    results.value = {
-      labels: EMOTION_LABELS,
-      scores: scores.slice(0, 6),
-      inferenceTime,
-    }
+    const classificationResult = await classifyText(textInput.value)
+    results.value = classificationResult
     showResults.value = true
   } catch (err: any) {
     console.error('Analysis error:', err)
     error.value = err.message || 'An error occurred'
-  } finally {
-    isAnalyzing.value = false
   }
 }
 
@@ -124,11 +51,6 @@ const getScorePercentage = (score: number) => {
 }
 
 onMounted(async () => {
-  // Detect backend
-  if (typeof navigator !== 'undefined' && (navigator as any).gpu) {
-    backendStatus.value = 'WebGPU'
-  }
-  
   try {
     await initializeModel()
   } catch (err) {
